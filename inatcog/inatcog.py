@@ -1123,7 +1123,7 @@ class INatCog(Listeners, commands.Cog, name="iNat", metaclass=CompositeMetaClass
         await ctx.send(filtered_taxon.taxon.name)
 
     async def _search(self, ctx, query, keyword: Optional[str]):
-        async def display_selected(result):
+        async def display_selected(result, message):
             mat = re.search(PAT_OBS_LINK, result)
             if mat:
                 results = (
@@ -1133,13 +1133,25 @@ class INatCog(Listeners, commands.Cog, name="iNat", metaclass=CompositeMetaClass
                 )["results"]
                 obs = get_obs_fields(results[0]) if results else None
                 if obs:
-                    embed = await self.make_obs_embed(
-                        ctx.guild, obs, f"{WWW_BASE_URL}/observations/{obs.obs_id}"
-                    )
+                    title, preview = self.format_obs(obs, with_link=True, with_id=False)
+                    if message.embeds:
+                        embed = message.embeds[0]
+                        if obs.images:
+                            image = obs.images[0]
+                            embed.set_image(url=image.url)
+                            embed.set_footer(text=image.attribution)
+                        embed.description = re.sub(
+                            r"(\n\n\*\*Selected:\*\*.*$|$)",
+                            "",
+                            embed.description,
+                            flags=re.M,
+                        )
+                        embed.description += (
+                            "\n\n**Selected:**\n" + title + "\n" + preview
+                        )
+                        await message.edit(embed=embed)
                     if obs and obs.sounds:
                         await self.maybe_send_sound_url(ctx.channel, obs.sounds[0])
-                    controls = {"❌": DEFAULT_CONTROLS["❌"]}
-                    await menu(ctx, [embed], controls)
                     return
                 else:
                     await ctx.send(embed=sorry(apology="Not found"))
@@ -1170,7 +1182,7 @@ class INatCog(Listeners, commands.Cog, name="iNat", metaclass=CompositeMetaClass
             if selected_result_offset > len(results) - 1:
                 return
             result = results[number + page * per_embed_page]
-            await display_selected(result)
+            await display_selected(result, message)
             await menu(ctx, pages, controls, message, page, timeout)
 
         kwargs = {}
