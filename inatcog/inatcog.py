@@ -1133,7 +1133,7 @@ class INatCog(Listeners, commands.Cog, name="iNat", metaclass=CompositeMetaClass
                 )["results"]
                 obs = get_obs_fields(results[0]) if results else None
                 if obs:
-                    title, preview = self.format_obs(obs, with_link=True, with_id=False)
+                    title, preview = self.format_obs(obs, with_link=True)
                     if message.embeds:
                         embed = message.embeds[0]
                         if obs.images:
@@ -1226,8 +1226,8 @@ class INatCog(Listeners, commands.Cog, name="iNat", metaclass=CompositeMetaClass
                     self.format_obs(
                         get_obs_fields(result),
                         with_description=False,
-                        with_id=False,
                         with_link=True,
+                        compact=True,
                     )
                 )
                 for result in raw_results
