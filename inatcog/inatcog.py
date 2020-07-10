@@ -41,6 +41,7 @@ _DEVELOPER_BOT_IDS = [614037008217800707, 620938327293558794]
 _INAT_GUILD_ID = 525711945270296587
 SPOILER_PAT = re.compile(r"\|\|")
 DOUBLE_BAR_LIT = "\\|\\|"
+SELECTED_PAT = re.compile(r"\n\n\*\*Selected:\*\*.*$", flags=re.M)
 
 
 class CompositeMetaClass(type(commands.Cog), type(ABC)):
@@ -1140,12 +1141,7 @@ class INatCog(Listeners, commands.Cog, name="iNat", metaclass=CompositeMetaClass
                             image = obs.images[0]
                             embed.set_image(url=image.url)
                             embed.set_footer(text=image.attribution)
-                        embed.description = re.sub(
-                            r"(\n\n\*\*Selected:\*\*.*$|$)",
-                            "",
-                            embed.description,
-                            flags=re.M,
-                        )
+                        embed.description = re.sub(SELECTED_PAT, "", embed.description)
                         embed.description += (
                             "\n\n**Selected:**\n" + title + "\n" + preview
                         )
