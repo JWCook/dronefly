@@ -7,6 +7,7 @@ from functools import partial
 from typing import DefaultDict, Tuple
 
 import inflect
+from pyinaturalist import iNatClient
 from redbot.core import commands, Config
 from redbot.core.utils.antispam import AntiSpam
 from .api import INatAPI
@@ -81,6 +82,9 @@ class INatCog(
         self.place_table = INatPlaceTable(self)
         self.project_table = INatProjectTable(self)
         self.site_search = INatSiteSearch(self)
+        self.client = iNatClient(
+            default_params={"locale": "en", "preferred_place_id": 1}
+        )
         self.user_cache_init = {}
         self.reaction_locks = {}
         self.predicate_locks = {}

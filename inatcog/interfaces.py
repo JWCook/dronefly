@@ -5,6 +5,7 @@ from asyncio import Event
 from typing import DefaultDict, Tuple
 
 from inflect import engine
+from pyinaturalist import iNatClient
 from redbot.core import Config
 from redbot.core.bot import Red
 from redbot.core.utils.antispam import AntiSpam
@@ -39,6 +40,7 @@ class MixinMeta(ABC):
         self.site_search: INatSiteSearch
         self.taxon_query: INatTaxonQuery
         self.query: INatQuery
+        self.client: iNatClient
         self.user_cache_init: dict
         self.member_as: DefaultDict[Tuple[int, int], AntiSpam]
         self._ready_event: Event

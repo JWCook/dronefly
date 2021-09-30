@@ -5,8 +5,6 @@ import re
 import textwrap
 from typing import Optional
 
-# TODO: Experimental & doesn't belong here. Migrate out to api.py later.
-from pyinaturalist import iNatClient
 from redbot.core import checks, commands
 from redbot.core.commands import BadArgument
 
@@ -190,9 +188,8 @@ class CommandsTaxon(INatEmbeds, MixinMeta):
     @commands.command(hidden=True)
     async def ttest(self, ctx, *, query: str):
         """Taxon via pyinaturalist (test)."""
-        client = iNatClient(default_params={"locale": "en", "preferred_place_id": 1})
         taxa = await ctx.bot.loop.run_in_executor(
-            None, partial(client.taxa.autocomplete, q=query)
+            None, partial(self.client.taxa.autocomplete, q=query)
         )
         if taxa:
             taxon = taxa[0]
