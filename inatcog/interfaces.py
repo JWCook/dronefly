@@ -9,7 +9,7 @@ from pyinaturalist import iNatClient
 from redbot.core import Config
 from redbot.core.bot import Red
 from redbot.core.utils.antispam import AntiSpam
-from .api import INatAPI
+from .core.apis.inat import INatAPI
 from .obs_query import INatObsQuery
 from .places import INatPlaceTable
 from .projects import INatProjectTable

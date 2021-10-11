@@ -3,7 +3,7 @@ from unittest import IsolatedAsyncioTestCase
 from unittest.mock import AsyncMock, MagicMock, patch
 from aiohttp import ClientSession
 
-from inatcog.api import INatAPI
+from inatcog.core.apis.inat import INatAPI
 
 API_REQUESTS_PATCH = patch("aiohttp_retry.RetryClient.get")
 

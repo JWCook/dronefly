@@ -1,4 +1,5 @@
 """Module to access iNaturalist API."""
+import logging
 from time import time
 from types import SimpleNamespace
 from typing import Union
@@ -16,7 +17,8 @@ from aiolimiter import AsyncLimiter
 from bs4 import BeautifulSoup
 import html2markdown
 
-from .common import LOG
+# FIXME: learn how Logging hierarchical loggers work and implement
+LOG = logging.getLogger("red.dronefly.inatcog")
 
 API_BASE_URL = "https://api.inaturalist.org"
 RETRY_EXCEPTIONS = [

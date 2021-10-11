@@ -10,7 +10,6 @@ import inflect
 from pyinaturalist import iNatClient
 from redbot.core import commands, Config
 from redbot.core.utils.antispam import AntiSpam
-from .api import INatAPI
 from .commands.inat import CommandsInat
 from .commands.last import CommandsLast
 from .commands.map import CommandsMap
@@ -20,6 +19,7 @@ from .commands.project import CommandsProject
 from .commands.search import CommandsSearch
 from .commands.taxon import CommandsTaxon
 from .commands.user import CommandsUser
+from .core.apis.inat import INatAPI
 from .obs_query import INatObsQuery
 from .places import INatPlaceTable
 from .projects import INatProjectTable
