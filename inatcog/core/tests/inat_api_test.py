@@ -2,7 +2,7 @@
 import json
 from unittest.mock import AsyncMock
 
-from aiohttp import web
+from aiohttp import ClientSession, web
 import pytest
 
 from ..apis.inat import INatAPI
@@ -18,7 +18,7 @@ async def fixture_inat_api():
 @pytest.fixture(name="mock_response")
 def fixture_mock_response(mocker):
     async_mock = AsyncMock()
-    mocker.patch("aiohttp.ClientSession.get", side_effect=async_mock)
+    mocker.patch.object(ClientSession, "get", side_effect=async_mock)
     return async_mock
 
 
