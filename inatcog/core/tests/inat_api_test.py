@@ -22,13 +22,15 @@ def fixture_mock_response(mocker):
     return async_mock
 
 
+def web_response(expected_result):
+    return web.Response(body=json.dumps(expected_result))
+
+
 pytestmark = pytest.mark.asyncio
 
 
-class TestINatAPI:
-    async def test_get_taxa_by_id(self, inat_api, mock_response):
-        """Test get_taxa by id."""
-        expected_result = {"results": [{"name": "Animalia"}]}
-        mock_response.return_value = web.Response(body=json.dumps(expected_result))
-        taxon = await inat_api.get_taxa(1)
-        assert taxon["results"][0]["name"] == "Animalia"
+async def test_get_taxa_by_id(inat_api, mock_response):
+    """Test get_taxa by id."""
+    mock_response.return_value = web_response({"results": [{"name": "Animalia"}]})
+    taxon = await inat_api.get_taxa(1)
+    assert taxon["results"][0]["name"] == "Animalia"
