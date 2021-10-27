@@ -64,7 +64,7 @@ async def test_get_users_by_id(inat_api, mock_response):
 async def test_get_users_by_login(inat_api, mock_response):
     mock_response.return_value = {"results": [{"id": 545640, "login": "benarmstrong"}]}
     users = await inat_api.get_users("benarmstrong", refresh_cache=True)
-    assert users["results"][0]["login"], "benarmstrong"
+    assert users["results"][0]["login"] == "benarmstrong"
 
 
 async def test_get_users_by_name(inat_api, mock_response):
