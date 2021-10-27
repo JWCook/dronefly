@@ -53,3 +53,26 @@ async def test_get_observation_bounds(inat_api, mock_response):
     mock_response.return_value = valid_result
     bounds = await inat_api.get_observation_bounds(["1"])
     assert bounds == valid_result["total_bounds"]
+
+
+async def test_get_users_by_id(inat_api, mock_response):
+    mock_response.return_value = {"results": [{"id": 545640, "login": "benarmstrong"}]}
+    users = await inat_api.get_users(545640, refresh_cache=True)
+    assert users["results"][0]["login"] == "benarmstrong"
+
+
+async def test_get_users_by_login(inat_api, mock_response):
+    mock_response.return_value = {"results": [{"id": 545640, "login": "benarmstrong"}]}
+    users = await inat_api.get_users("benarmstrong", refresh_cache=True)
+    assert users["results"][0]["login"], "benarmstrong"
+
+
+async def test_get_users_by_name(inat_api, mock_response):
+    mock_response.return_value = {
+        "results": [
+            {"id": 545640, "login": "benarmstrong"},
+            {"id": 2, "login": "bensomebodyelse"},
+        ]
+    }
+    users = await inat_api.get_users("Ben Armstrong", refresh_cache=True)
+    assert users["results"][1]["login"] == "bensomebodyelse"
