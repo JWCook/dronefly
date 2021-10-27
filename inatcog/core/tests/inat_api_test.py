@@ -9,9 +9,7 @@ from ..apis.inat import INatAPI
 
 @pytest.fixture(name="inat_api")
 async def fixture_inat_api():
-    inat_api = INatAPI()
-    yield inat_api
-    await inat_api.session.close()
+    return INatAPI()
 
 
 @pytest.fixture(name="mock_response")
