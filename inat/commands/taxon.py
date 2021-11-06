@@ -1,8 +1,6 @@
 """Module for taxon command group."""
 
-from functools import partial
 import re
-import textwrap
 from typing import Optional
 
 from redbot.core import checks, commands
@@ -12,7 +10,7 @@ from ..base_classes import WWW_BASE_URL
 from ..converters.base import NaturalQueryConverter
 from ..converters.reply import TaxonReplyConverter
 from ..core.models.taxon import PLANTAE_ID
-from ..embeds.common import apologize, make_embed, MAX_EMBED_DESCRIPTION_LEN
+from ..embeds.common import apologize, make_embed
 from ..embeds.inat import INatEmbeds
 from ..interfaces import MixinMeta
 from ..taxa import get_taxon
@@ -184,36 +182,6 @@ class CommandsTaxon(INatEmbeds, MixinMeta):
             return
 
         await self.send_embed_for_taxon(ctx, query_response)
-
-    @commands.command(hidden=True)
-    async def ttest(self, ctx, *, query: str):
-        """Taxon via pyinaturalist (test)."""
-        taxa = await ctx.bot.loop.run_in_executor(
-            None, partial(self.client.taxa.autocomplete, q=query)
-        )
-        if taxa:
-            taxon = taxa[0]
-            embed = make_embed()
-            # Show enough of the record for a satisfying test.
-            embed.title = taxon.name
-            embed.url = f"{WWW_BASE_URL}/taxa/{taxon.id}"
-            default_photo = taxon.default_photo
-            if default_photo:
-                medium_url = default_photo.medium_url
-                if medium_url:
-                    embed.set_image(url=medium_url)
-                    embed.set_footer(text=default_photo.attribution)
-            embed.description = (
-                "```py\n"
-                + textwrap.shorten(
-                    f"{repr(taxon)}",
-                    width=MAX_EMBED_DESCRIPTION_LEN
-                    - 10,  # i.e. minus the code block markup
-                    placeholder="…",
-                )
-                + "\n```"
-            )
-            await ctx.send(embed=embed)
 
     @commands.command()
     async def tname(self, ctx, *, query: NaturalQueryConverter):

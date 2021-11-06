@@ -9,7 +9,7 @@ from redbot.core.commands import Context
 from redbot.core.utils.predicates import ReactionPredicate
 from redbot.core.utils.menus import start_adding_reactions
 
-from inatcog.common import make_decorator
+from ..common import make_decorator
 
 EMBED_COLOR = 0x90EE90
 # From https://discordapp.com/developers/docs/resources/channel#embed-limits

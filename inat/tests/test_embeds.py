@@ -1,4 +1,4 @@
-from inatcog.embeds import common as embeds
+from ..embeds import common as embeds
 import unittest
 
 

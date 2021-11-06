@@ -9,11 +9,10 @@ from discord.utils import escape_markdown
 
 from .controlled_terms import ControlledTermSelector
 from .core import models
+from .core.formatters.constants import WWW_BASE_URL
 from .core.models.taxon import RANK_LEVELS, TAXON_PRIMARY_RANKS, TRINOMIAL_ABBR
 from .photos import Photo
 from .sounds import Sound
-
-WWW_BASE_URL = "https://www.inaturalist.org"
 
 
 @dataclass
