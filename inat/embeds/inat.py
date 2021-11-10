@@ -24,6 +24,11 @@ from ..base_classes import (
     WWW_BASE_URL,
 )
 from ..common import LOG
+from ..core.formatters.discord import (
+    format_items_for_embed,
+    MAX_EMBED_DESCRIPTION_LEN,
+    MAX_EMBED_FILE_LEN,
+)
 from ..core.parsers.url import (
     MARKDOWN_LINK,
     PAT_OBS_LINK,
@@ -34,10 +39,7 @@ from ..core.parsers.url import (
 from ..core.query.query import EMPTY_QUERY, Query, TaxonQuery
 from ..embeds.common import (
     add_reactions_with_cancel,
-    format_items_for_embed,
     make_embed,
-    MAX_EMBED_DESCRIPTION_LEN,
-    MAX_EMBED_FILE_LEN,
     NoRoomInDisplay,
 )
 from ..interfaces import MixinMeta

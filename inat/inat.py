@@ -1,6 +1,5 @@
 """A cog for using the iNaturalist platform."""
 import asyncio
-import re
 from datetime import timedelta
 from functools import partial
 import textwrap
@@ -13,26 +12,11 @@ from redbot.core import commands, Config
 from redbot.core.utils.antispam import AntiSpam
 from .core.apis.inat import INatAPI
 from .core.formatters.constants import WWW_BASE_URL
+from .core.formatters.discord import EMBED_COLOR, MAX_EMBED_DESCRIPTION_LEN
 
 _SCHEMA_VERSION = 2
 _DEVELOPER_BOT_IDS = [614037008217800707, 620938327293558794]
 _INAT_GUILD_ID = 525711945270296587
-SPOILER_PAT = re.compile(r"\|\|")
-DOUBLE_BAR_LIT = "\\|\\|"
-
-# FIXME: from embeds/common.py; belong in core:
-EMBED_COLOR = 0x90EE90
-# From https://discordapp.com/developers/docs/resources/channel#embed-limits
-MAX_EMBED_TITLE_LEN = MAX_EMBED_NAME_LEN = 256
-MAX_EMBED_DESCRIPTION_LEN = 2048
-MAX_EMBED_FIELDS = 25
-MAX_EMBED_VALUE_LEN = 1024
-MAX_EMBED_FOOTER_LEN = 2048
-MAX_EMBED_AUTHOR_LEN = 256
-MAX_EMBED_LEN = 6000
-# It's not exactly 2**23 due to overhead, but how much less, we can't determine.
-# This is a safe value that works for others.
-MAX_EMBED_FILE_LEN = 8000000
 
 
 # pylint: disable=too-many-ancestors,too-many-instance-attributes
