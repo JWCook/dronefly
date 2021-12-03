@@ -2,7 +2,6 @@
 import asyncio
 from datetime import timedelta
 from functools import partial
-import textwrap
 from typing import DefaultDict, Tuple
 
 import discord
@@ -12,7 +11,8 @@ from redbot.core import commands, Config
 from redbot.core.utils.antispam import AntiSpam
 from .core.apis.inat import INatAPI
 from .core.formatters.constants import WWW_BASE_URL
-from .core.formatters.discord import EMBED_COLOR, MAX_EMBED_DESCRIPTION_LEN
+from .core.formatters.discord import EMBED_COLOR
+from .core.formatters.generic import format_taxon_name
 
 _SCHEMA_VERSION = 2
 _DEVELOPER_BOT_IDS = [614037008217800707, 620938327293558794]
@@ -124,14 +124,5 @@ class INat(commands.Cog, name="iNat"):
                 if medium_url:
                     embed.set_image(url=medium_url)
                     embed.set_footer(text=default_photo.attribution)
-            embed.description = (
-                "```py\n"
-                + textwrap.shorten(
-                    f"{repr(taxon)}",
-                    width=MAX_EMBED_DESCRIPTION_LEN
-                    - 10,  # i.e. minus the code block markup
-                    placeholder="…",
-                )
-                + "\n```"
-            )
+            embed.description = format_taxon_name(taxon)
             await ctx.send(embed=embed)
