@@ -25,7 +25,6 @@ from ..base_classes import (
 )
 from ..common import LOG
 from ..core.formatters.discord import (
-    format_items_for_embed,
     MAX_EMBED_DESCRIPTION_LEN,
     MAX_EMBED_FILE_LEN,
 )
@@ -37,6 +36,7 @@ from ..core.parsers.url import (
     PAT_TAXON_LINK,
 )
 from ..core.query.query import EMPTY_QUERY, Query, TaxonQuery
+from ..core.utils.decorators import format_items_for_embed
 from ..embeds.common import (
     add_reactions_with_cancel,
     make_embed,
