@@ -10,9 +10,7 @@ from pyinaturalist import iNatClient
 from redbot.core import commands, Config
 from redbot.core.utils.antispam import AntiSpam
 from .core.apis.inat import INatAPI
-from .core.formatters.constants import WWW_BASE_URL
-from .core.formatters.discord import EMBED_COLOR
-from .core.formatters.generic import format_taxon_name
+from .core.formatters.discord import format_taxon_image_embed
 
 _SCHEMA_VERSION = 2
 _DEVELOPER_BOT_IDS = [614037008217800707, 620938327293558794]
@@ -112,17 +110,5 @@ class INat(commands.Cog, name="iNat"):
             None, partial(self.client.taxa.autocomplete, q=query)
         )
         if taxa:
-            taxon = taxa[0]
-            embed = discord.Embed(color=EMBED_COLOR)
-
-            # Show enough of the record for a satisfying test.
-            embed.title = taxon.name
-            embed.url = f"{WWW_BASE_URL}/taxa/{taxon.id}"
-            default_photo = taxon.default_photo
-            if default_photo:
-                medium_url = default_photo.medium_url
-                if medium_url:
-                    embed.set_image(url=medium_url)
-                    embed.set_footer(text=default_photo.attribution)
-            embed.description = format_taxon_name(taxon)
+            embed = discord.Embed.from_dict(format_taxon_image_embed(taxa[0]))
             await ctx.send(embed=embed)
