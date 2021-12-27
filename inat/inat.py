@@ -9,7 +9,7 @@ import inflect
 from pyinaturalist import iNatClient
 from redbot.core import commands, Config
 from redbot.core.utils.antispam import AntiSpam
-from .core.apis.inat import INatAPI
+
 from .core.formatters.discord import format_taxon_image_embed
 
 _SCHEMA_VERSION = 2
@@ -34,7 +34,6 @@ class INat(commands.Cog, name="iNat"):
         super().__init__()
         self.bot = bot
         self.config = Config.get_conf(self, identifier=1607)
-        self.api = INatAPI()
         self.p = inflect.engine()  # pylint: disable=invalid-name
         self.client = iNatClient(
             default_params={"locale": "en", "preferred_place_id": 1}
@@ -100,15 +99,12 @@ class INat(commands.Cog, name="iNat"):
         if not self._cleaned_up:
             if self._init_task:
                 self._init_task.cancel()
-            self.bot.loop.create_task(self.api.session.close())
+            self.bot.loop.create_task(self.client.session.close())
             self._cleaned_up = True
 
     @commands.command()
     async def ttest(self, ctx, *, query: str):
         """Taxon via pyinaturalist (test)."""
-        taxa = await ctx.bot.loop.run_in_executor(
-            None, partial(self.client.taxa.autocomplete, q=query)
-        )
-        if taxa:
-            embed = discord.Embed.from_dict(format_taxon_image_embed(taxa[0]))
+        async for taxon in self.client.taxa.autocomplete(q=query, limit=1):
+            embed = discord.Embed.from_dict(format_taxon_image_embed(taxon))
             await ctx.send(embed=embed)
