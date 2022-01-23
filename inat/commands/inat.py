@@ -26,7 +26,7 @@ class CommandsInat(INatEmbeds, MixinMeta):
 
     @commands.command(name="autoobs")
     async def topic_autoobs(self, ctx):
-        """*Help* for automatic observation previews.
+        """\u200b*Automatic observation* link preview feature.
 
         When `autoobs` is on for the channel/server:
 
@@ -40,9 +40,36 @@ class CommandsInat(INatEmbeds, MixinMeta):
         """  # noqa: E501
         await ctx.send_help()
 
-    @commands.command(name="date", aliases=["dates"])
-    async def topic_date(self, ctx):
-        """*Help* for *date* filters and sort order.
+    @commands.command(name="cheatsheet", aliases=["commands"])
+    async def topic_cheatsheet(self, ctx):
+        """\u200b*Common commands.*
+
+        **Taxon:**
+        `,t birds` -> *the birds taxon*
+        `,s taxa sparrow` -> *any named: sparrow*
+        **Observer counts:**
+        `,t my birds` -> *count mine*
+        `,t birds by kueda` -> *count theirs*
+        `,tab my birds` -> *just count; no taxon*
+        **Place counts:**
+        `,t home birds` -> *home place counts*
+        `,t birds from peru` -> *peru counts*
+        **Search observations:**
+        `,s my birds` -> *my birds*
+        `,s obs home birds` -> *from my home*
+        `,s obs birds from peru` -> *from peru*
+        **Match one observation:**
+        `,obs my birds` -> *my latest bird*
+        **Use filters:**
+        `,obs my rg birds` -> *a bird that is RG*
+        `,obs my nid birds` -> *one that needs id*
+        `,s my nid birds` -> *any that need id*
+        """  # noqa: E501
+        await ctx.send_help()
+
+    @commands.command(name="dates", aliases=["date"])
+    async def topic_dates(self, ctx):
+        """\u200b*Date filters* and *sort order*.
 
         See also: `[p]query`, `[p]macros`, `[p]advanced`.
 
@@ -81,7 +108,7 @@ class CommandsInat(INatEmbeds, MixinMeta):
 
     @commands.command(name="dot_taxon")
     async def topic_dot_taxon(self, ctx):
-        """*Help* for the `.taxon.` lookup feature.
+        """\u200b*Automatic `.taxon.` lookup* feature.
 
         When `dot_taxon` is on for the channel/server:
 
@@ -107,13 +134,13 @@ class CommandsInat(INatEmbeds, MixinMeta):
         """
         await ctx.send_help()
 
-    @commands.command(name="macros")
+    @commands.command(name="macros", aliases=["macro"])
     async def topic_macros(self, ctx):
-        """*Help* for *query* macros.
+        """\u200b*Macro query* terms.
 
         A *query* or *taxon query* may include *macros* which are expanded to other query terms described below.
 
-        See also: `[p]query`, `[p]query_taxon`, and `[p]groups`.
+        See also: `[p]query`, `[p]taxon_query`, and `[p]groups`.
 
         __**`Macro`**__`  `__`Expands to`__
         **`my`**`      by me`
@@ -130,9 +157,9 @@ class CommandsInat(INatEmbeds, MixinMeta):
         """  # noqa: E501
         await ctx.send_help()
 
-    @commands.command(name="groups")
+    @commands.command(name="groups", aliases=["group"])
     async def topic_groups(self, ctx):
-        """*Help* for *query* macros that are *taxonomic groups*.
+        """\u200b*Query* macros that are *taxonomic groups*.
 
         See also: `[p]macros`, and `[p]query`.
 
@@ -153,13 +180,13 @@ class CommandsInat(INatEmbeds, MixinMeta):
         """  # noqa: E501
         await ctx.send_help()
 
-    @commands.command(name="query")
+    @commands.command(name="query", aliases=["queries"])
     async def topic_query(self, ctx):
-        """*Help* for observation *query* terms.
+        """\u200b*Observation query* terms.
 
         A *query* may contain *taxon query* terms, *macros*, and other *query* terms described below.
 
-        See also: `[p]query_taxon`, `[p]date`, `[p]advanced`, `[p]macros`.
+        See also: `[p]taxon_query`, `[p]dates`, `[p]advanced`, `[p]macros`.
 
         Aside from *taxon*, other *query* terms may be:
         - `by <name>` for named user's observations; also `by me` or just `my` (a *macro*) for yourself
@@ -168,7 +195,7 @@ class CommandsInat(INatEmbeds, MixinMeta):
         - `with <term> <value>` for *controlled term* with the given *value*
         - `not by <name>` for obs unobserved by the user
         - `id by <name>` for obs ided by the user
-        - `[added] since <date>`, `[added] until <date>`, `[added] on <date>`; see `[p]help date` for details
+        - `[added] since <date>`, `[added] until <date>`, `[added] on <date>`; see `[p]dates` for details
         **Examples:**
         ```
         [p]obs by benarmstrong
@@ -183,9 +210,9 @@ class CommandsInat(INatEmbeds, MixinMeta):
         """  # noqa: E501
         await ctx.send_help()
 
-    @commands.command(name="advanced")
-    async def topic_advanced(self, ctx):
-        """*Help* for `opt` *advanced query* options.
+    @commands.command(name="advanced_query", aliases=["advanced_queries", "advanced"])
+    async def topic_advanced_query(self, ctx):
+        """\u200b*Advanced query* options (`opt`).
 
         Shortcuts for the most commonly used `opt` options are provided as *macros*, e.g. use `rg` instead of `opt quality_grade=research`.
 
@@ -207,9 +234,9 @@ class CommandsInat(INatEmbeds, MixinMeta):
         """  # noqa: E501
         await ctx.send_help()
 
-    @commands.command(name="query_taxon")
-    async def topic_query_taxon(self, ctx):
-        """*Help* for *taxon query* terms.
+    @commands.command(name="taxon_query", aliases=["taxon_queries", "query_taxon"])
+    async def topic_taxon_query(self, ctx):
+        """\u200b*Taxon query* terms.
 
         See also: `[p]query` and `[p]macros` to specify what is also shown about a taxon.
 
@@ -234,9 +261,11 @@ class CommandsInat(INatEmbeds, MixinMeta):
         """  # noqa: E501
         await ctx.send_help()
 
-    @commands.command(name="glossary")
+    @commands.command(
+        name="glossary", aliases=["term", "terms", "abbrevation", "abbreviations"]
+    )
     async def topic_counts(self, ctx):
-        """*Help* with terminology and abbreviations.
+        """\u200b*Glossary* of terms and abbreviations.
 
         __**Obs.** = observations__
         __**Leaf taxa** = distinct taxa counted__ (per observer, place, etc.)
@@ -248,9 +277,9 @@ class CommandsInat(INatEmbeds, MixinMeta):
         """  # noqa: E501
         await ctx.send_help()
 
-    @commands.command(name="reactions")
+    @commands.command(name="reactions", aliases=["reaction"])
     async def topic_reactions(self, ctx):
-        """*Help* for taxon reaction buttons.
+        """\u200bTaxon *reaction* buttons.
 
         Taxon reaction buttons appear on many different displays.  You may use them only if your iNat account is known in the server.
         - :bust_in_silhouette: to count your observations and species
