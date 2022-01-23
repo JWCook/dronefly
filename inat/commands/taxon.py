@@ -31,7 +31,7 @@ class CommandsTaxon(INatEmbeds, MixinMeta):
         - *Reply* to another display to display its taxon.
         - The *query* is optional when that display contains a taxon.
         **Related help topics:**
-        - `[p]help query_taxon` for *taxon query* terms
+        - `[p]help taxon_query` for *taxon query* terms
         - `[p]help query` for help with other *query* terms
         - `[p]help reactions` describes the *reaction buttons*
         - `[p]help s taxa` to search and browse matching taxa
@@ -187,7 +187,7 @@ class CommandsTaxon(INatEmbeds, MixinMeta):
     async def tname(self, ctx, *, query: NaturalQueryConverter):
         """Taxon name only.
 
-        See `[p]help query_taxon` for help with the query.
+        See `[p]help taxon_query` for help with the query.
         ```
         """
 
@@ -211,7 +211,7 @@ class CommandsTaxon(INatEmbeds, MixinMeta):
     async def species(self, ctx, *, query: NaturalQueryConverter):
         """Species information. (alias `[p]t` *query* `rank sp`)
 
-        See `[p]help query_taxon` for query help."""
+        See `[p]help taxon_query` for query help."""
         query_species = query
         query_species.main.ranks.append("species")
         await self.taxon(ctx, query=query_species)
@@ -226,7 +226,7 @@ class CommandsTaxon(INatEmbeds, MixinMeta):
         [p]related 24255,24267
         [p]related boreal chorus frog,western chorus frog
         ```
-        See `[p]help query_taxon` for help specifying taxa.
+        See `[p]help taxon_query` for help specifying taxa.
         """
 
         if not taxa_list:
@@ -246,7 +246,7 @@ class CommandsTaxon(INatEmbeds, MixinMeta):
     async def image(self, ctx, *, query: NaturalQueryConverter):
         """Default image for a taxon.
 
-        See `[p]help query_taxon` for *query* help."""
+        See `[p]help taxon_query` for *query* help."""
         try:
             self.check_taxon_query(ctx, query)
         except BadArgument as err:
