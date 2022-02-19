@@ -8,7 +8,7 @@ from redbot.core.commands import BadArgument
 from redbot.core.utils.menus import menu, DEFAULT_CONTROLS
 
 from ..base_classes import User
-from ..checks import known_inat_user
+from ..checks import can_manage_users, known_inat_user
 from ..common import DEQUOTE, grouper
 from ..converters.base import (
     MemberConverter,
@@ -63,9 +63,9 @@ class CommandsUser(INatEmbeds, MixinMeta):
             await ctx.send(embed=embed)
 
     @user.command(name="add")
-    @checks.admin_or_permissions(manage_roles=True)
+    @can_manage_users()
     async def user_add(self, ctx, discord_user: discord.User, inat_user):
-        """Add user as an iNat user (mods only).
+        """Add user as an iNat user for this server.
 
         `discord_user`
         - Discord user mention, ID, username, or nickname.
@@ -129,9 +129,9 @@ class CommandsUser(INatEmbeds, MixinMeta):
         )
 
     @user.command(name="remove")
-    @checks.admin_or_permissions(manage_roles=True)
+    @can_manage_users()
     async def user_remove(self, ctx, discord_user: discord.User):
-        """Remove user as an iNat user (mods only).
+        """Remove user as an iNat user for this server.
 
         `discord_user`
         - Discord username or nickname
@@ -276,10 +276,17 @@ class CommandsUser(INatEmbeds, MixinMeta):
         await self.user_show_settings(ctx, config, "known")
 
     @user.command(name="list")
-    @checks.admin_or_permissions(manage_roles=True)
+    @can_manage_users()
     @checks.bot_has_permissions(embed_links=True)
-    async def user_list(self, ctx, with_role: str = None):
-        """List members with known iNat ids (mods only)."""
+    async def user_list(self, ctx, abbrev: str = None):
+        """List members with known iNat ids on this server.
+
+        The `abbrev` can be `active`, `inactive`, or an *event* abbreviation. The user list will only show known users with the associated role and/or in the event project. Discrepancies will be listed first.
+
+        Note: If a user not known in the server holds an event role, or is added to an event project, those discrepancies won't be reported.
+
+        See also: `[p]help inat set event`, `[p]help inat set active_role`, and `[p]help inat set inactive_role`.
+        """  # noqa: E501
         if not ctx.guild:
             return
 
@@ -291,16 +298,19 @@ class CommandsUser(INatEmbeds, MixinMeta):
         event_projects = await config.event_projects()
         filter_role = None
         filter_role_id = None
-        if with_role:
-            if with_role == "active":
+        team_roles = []
+        if abbrev:
+            if abbrev == "active":
                 filter_role_id = await config.active_role()
-            elif with_role == "inactive":
+            elif abbrev == "inactive":
                 filter_role_id = await config.inactive_role()
+            elif abbrev in event_projects:
+                filter_role_id = event_projects[abbrev]["role"]
             else:
                 await ctx.send_help()
                 return
-        if with_role and not filter_role_id:
-            await ctx.send(embed=make_embed(description=f"No {with_role} role set."))
+        if abbrev and not filter_role_id:
+            await ctx.send(embed=make_embed(description=f"No {abbrev} role set."))
             return
 
         if filter_role_id:
@@ -310,17 +320,44 @@ class CommandsUser(INatEmbeds, MixinMeta):
             if not filter_role:
                 await ctx.send(
                     embed=make_embed(
-                        description=f"The {with_role} role is not a guild role: "
+                        description=f"The {abbrev} role is not a guild role: "
                         f"<@&{filter_role_id}>."
                     )
                 )
                 return
 
-        event_project_ids = {
-            int(event_projects[prj]["project_id"]): prj for prj in event_projects
+        main_event_project_ids = {
+            int(event_projects[prj_abbrev]["project_id"]): prj_abbrev
+            for prj_abbrev in event_projects
+            if event_projects[prj_abbrev]["main"]
+            and int(event_projects[prj_abbrev]["project_id"])
         }
+        if abbrev in event_projects:
+            prj = event_projects[abbrev]
+            prj_id = int(prj["project_id"])
+            event_project_ids = {}
+            if prj_id:
+                event_project_ids[prj_id] = abbrev
+                teams = prj["teams"]
+                team_abbrevs = teams.split(",") if teams else []
+            for team_abbrev in team_abbrevs:
+                if team_abbrev in event_projects:
+                    prj = event_projects[team_abbrev]
+                    prj_id = int(prj["project_id"])
+                    event_project_ids[prj_id] = team_abbrev
+                    team_role_id = prj["role"]
+                    team_role = next(
+                        (role for role in ctx.guild.roles if role.id == team_role_id),
+                        None,
+                    )
+                    if team_role:
+                        team_roles.append(team_role)
+
+        else:
+            event_project_ids = main_event_project_ids
         responses = [
-            await self.api.get_projects(prj_id) for prj_id in event_project_ids
+            await self.api.get_projects(prj_id, refresh_cache=True)
+            for prj_id in event_project_ids
         ]
         projects = [
             UserProject.from_dict(response["results"][0])
@@ -328,28 +365,56 @@ class CommandsUser(INatEmbeds, MixinMeta):
             if response
         ]
 
-        if not self.user_cache_init.get(ctx.guild.id):
-            await self.api.get_observers_from_projects(list(event_project_ids.keys()))
+        # Only do the extra work to initially cache all the observers when
+        # listing all users.
+        # - TODO: review caching and make it a little less magic
+        if main_event_project_ids and not self.user_cache_init.get(ctx.guild.id):
+            await self.api.get_observers_from_projects(list(main_event_project_ids))
             self.user_cache_init[ctx.guild.id] = True
 
         def abbrevs(user_id: int):
-            abbrevs = [
+            return [
                 event_project_ids[int(project.project_id)]
                 for project in projects
                 if user_id in project.observed_by_ids()
             ]
-            return " ".join(abbrevs)
 
-        # TODO: Support lazy loading of pages of users (issues noted in comments below).
-        all_names = [
-            f"{dmember.mention} is {iuser.profile_link()} {abbrevs(iuser.user_id)}"
-            async for (dmember, iuser) in self.user_table.get_member_pairs(
-                ctx.guild, all_users
-            )
-            if not filter_role or filter_role in dmember.roles
+        matching_names = []
+        non_matching_names = []
+        async for (dmember, iuser) in self.user_table.get_member_pairs(
+            ctx.guild, all_users
+        ):
+            project_abbrevs = abbrevs(iuser.user_id)
+            line = f"{dmember.mention} is {iuser.profile_link()}\n{' '.join(project_abbrevs)}"
+            if filter_role:
+                if abbrev not in project_abbrevs and filter_role not in dmember.roles:
+                    continue
+                has_opposite_team_role = False
+                for role in [filter_role, *team_roles]:
+                    if role in dmember.roles:
+                        line += f" {role.mention}"
+                        if role in team_roles:
+                            has_opposite_team_role = True
+                role_strictly_matches_project = (
+                    abbrev in project_abbrevs
+                    and abbrev not in team_abbrevs
+                    and filter_role in dmember.roles
+                    and not has_opposite_team_role
+                )
+            else:
+                role_strictly_matches_project = True
+            if role_strictly_matches_project:
+                matching_names.append(line)
+            else:
+                non_matching_names.append(line)
+
+        # Placing non matching names first allows an event manager to easily
+        # spot and correct mismatches. See role_strictly_matches_project above
+        # for what constititutes a mismatch.
+        pages = [
+            "\n".join(filter(None, names))
+            for names in grouper([*non_matching_names, *matching_names], 10)
         ]
-
-        pages = ["\n".join(filter(None, names)) for names in grouper(all_names, 10)]
 
         if pages:
             pages_len = len(pages)  # Causes enumeration (works against lazy load).

@@ -28,6 +28,7 @@ from ..core.formatters.discord import (
     MAX_EMBED_DESCRIPTION_LEN,
     MAX_EMBED_FILE_LEN,
 )
+from ..core.models.taxon import RANK_LEVELS
 from ..core.parsers.url import (
     MARKDOWN_LINK,
     PAT_OBS_LINK,
@@ -73,13 +74,13 @@ TAXONOMY_PAT = re.compile(r"in:(?P<taxonomy>.*?(?=\n__.*$)|.*$)", re.DOTALL)
 
 OBS_ID_PAT = re.compile(r"\(.*/observations/(?P<obs_id>\d+).*?\)")
 PLACE_ID_PAT = re.compile(
-    r"\n\[[0-9 \(\)]+\]\(.*?[\?\&]place_id=(?P<place_id>\d+).*?\)"
+    r"\n\[[0-9, \(\)]+\]\(.*?[\?\&]place_id=(?P<place_id>\d+).*?\)"
 )
 UNOBSERVED_BY_USER_ID_PAT = re.compile(
-    r"\n\[[0-9 \(\)]+\]\(.*?[\?\&]unobserved_by_user_id=(?P<unobserved_by_user_id>\d+).*?\)",
+    r"\n\[[0-9, \(\)]+\]\(.*?[\?\&]unobserved_by_user_id=(?P<unobserved_by_user_id>\d+).*?\)",
 )
 ID_BY_USER_ID_PAT = re.compile(
-    r"\n\[[0-9 \(\)]+\]\(.*?[\?\&]ident_user_id=(?P<ident_user_id>\d+).*?\)",
+    r"\n\[[0-9, \(\)]+\]\(.*?[\?\&]ident_user_id=(?P<ident_user_id>\d+).*?\)",
 )
 USER_ID_PAT = re.compile(r"\n\[[0-9 \(\)]+\]\(.*?[\?\&]user_id=(?P<user_id>\d+).*?\)")
 
@@ -470,6 +471,26 @@ class INatEmbeds(MixinMeta):
 
         return await channel.send(embed=embed)
 
+    async def summarize_obs_spp_counts(self, taxon, obs_args):
+        observations = await self.api.get_observations(per_page=0, **obs_args)
+        if observations:
+            species = await self.api.get_observations(
+                "species_counts", per_page=0, **obs_args
+            )
+            observations_count = observations["total_results"]
+            species_count = species["total_results"]
+            url = f"{WWW_BASE_URL}/observations?" + urlencode(obs_args)
+            species_url = url + "&view=species"
+            if taxon and RANK_LEVELS[taxon.rank] <= RANK_LEVELS["species"]:
+                summary_counts = f"Total: [{observations_count:,}]({url})"
+            else:
+                summary_counts = (
+                    f"Total: [{observations_count:,}]({url}) "
+                    f"Species: [{species_count:,}]({species_url})"
+                )
+            return summary_counts
+        return ""
+
     async def make_obs_counts_embed(self, query_response: QueryResponse):
         """Return embed for observation counts from place or by user."""
         formatted_counts = ""
@@ -503,8 +524,13 @@ class INatEmbeds(MixinMeta):
             )
             title_query_response.place = None
             header = TAXON_PLACES_HEADER
+        summary_counts = ""
+        title_query_args = title_query_response.obs_args()
+        summary_counts = await self.summarize_obs_spp_counts(taxon, title_query_args)
         if formatted_counts:
-            description = f"\n{header}\n{formatted_counts}"
+            description = f"\n{summary_counts}\n{header}\n{formatted_counts}"
+        else:
+            description = summary_counts
 
         url = f"{WWW_BASE_URL}/observations"
         title_args = title_query_response.obs_args()
@@ -913,7 +939,7 @@ class INatEmbeds(MixinMeta):
         async def format_description(
             rec, status, means_fmtd, obs_cnt, obs_url, obs_cnt_filtered
         ):
-            obs_fmt = "[%d](%s)" % (obs_cnt, obs_url)
+            obs_fmt = f"[{obs_cnt:,}]({obs_url})"
             if status:
                 # inflect statuses with single digits in them correctly
                 first_word = re.sub(
@@ -1008,9 +1034,14 @@ class INatEmbeds(MixinMeta):
         """Get user's ranked obs & spp stats for a project."""
 
         async def get_unranked_count(*args, **kwargs):
-            response = await self.api.get_observations(
-                *args, project_id=project_id, user_id=user.user_id, per_page=0, **kwargs
-            )
+            _kwargs = {
+                "user_id": user.user_id,
+                "per_page": 0,
+                **kwargs,
+            }
+            if project_id:
+                _kwargs["project_id"] = project_id
+            response = await self.api.get_observations(*args, **_kwargs)
             if response:
                 return response["total_results"]
             return "unknown"
@@ -1031,9 +1062,9 @@ class INatEmbeds(MixinMeta):
         # TODO: cache for a short while so users can compare stats but not
         # have to worry about stale data.
         if with_rank:
-            response = await self.api.get_project_observers_stats(
-                project_id=project_id, **kwargs
-            )
+            if project_id:
+                kwargs["project_id"] = project_id
+            response = await self.api.get_observers_stats(**kwargs)
             stats = [
                 ObserverStats.from_dict(observer) for observer in response["results"]
             ]
@@ -1063,21 +1094,32 @@ class INatEmbeds(MixinMeta):
         return (count, rank)
 
     async def get_user_server_projects_stats(self, ctx, user):
-        """Get a user's stats for the server's event projects."""
+        """Get a user's stats for the server's main event projects."""
         event_projects = await self.config.guild(ctx.guild).event_projects() or {}
-        project_ids = {
-            int(event_projects[prj]["project_id"]): prj for prj in event_projects
+        projects_by_id = {
+            int(event_projects[prj]["project_id"]): prj
+            for prj in event_projects
+            if event_projects[prj].get("main")
         }
-        projects = await self.api.get_projects(
-            list(project_ids.keys()), refresh_cache=True
-        )
+        project_ids = [project_id for project_id in projects_by_id if project_id]
+        projects = await self.api.get_projects(project_ids, refresh_cache=True)
         stats = []
-        for project_id in project_ids:
-            if project_id not in projects:
+        for project_id in projects_by_id:
+            if project_id and project_id not in projects:
                 continue
-            user_project = UserProject.from_dict(projects[project_id]["results"][0])
-            if user.user_id in user_project.observed_by_ids():
-                abbrev = project_ids[int(project_id)]
+            # Project id 0 is a pseudo-project consisting of just one person
+            # - this allows a server to define user's all-time stats to put in
+            #   `,me` without a project to track them
+            # - set up this special stats item with:
+            #   `,inat set event ever 0 true`
+            # - note that
+            if project_id:
+                user_project = UserProject.from_dict(projects[project_id]["results"][0])
+                is_member = user.user_id in user_project.observed_by_ids()
+            else:
+                is_member = True
+            if is_member:
+                abbrev = projects_by_id[int(project_id)]
                 obs_stats = await self.get_user_project_stats(
                     project_id, user, with_rank=False
                 )
@@ -1098,22 +1140,21 @@ class INatEmbeds(MixinMeta):
             obs_count, _obs_rank = obs_stats
             spp_count, _spp_rank = spp_stats
             taxa_count, _taxa_rank = taxa_stats
-            url = (
-                f"{WWW_BASE_URL}/observations?project_id={project_id}"
-                f"&user_id={user.user_id}"
-            )
+            url = f"{WWW_BASE_URL}/observations?user_id={user.user_id}"
+            if int(project_id):
+                url += f"&project_id={project_id}"
             obs_url = f"{url}&view=observations&verifiable=any"
             spp_url = f"{url}&view=species&verifiable=any&hrank=species"
             taxa_url = f"{url}&view=species&verifiable=any"
             fmt = (
-                f"[{obs_count}]({obs_url}) / [{spp_count}]({spp_url}) / "
-                f"[{taxa_count}]({taxa_url})"
+                f"[{obs_count:,}]({obs_url}) / [{spp_count:,}]({spp_url}) / "
+                f"[{taxa_count:,}]({taxa_url})"
             )
             embed.add_field(
                 name=f"Obs / Spp / Leaf taxa ({abbrev})", value=fmt, inline=True
             )
         ids = user.identifications_count
-        url = f"[{ids}]({WWW_BASE_URL}/identifications?user_id={user.user_id})"
+        url = f"[{ids:,}]({WWW_BASE_URL}/identifications?user_id={user.user_id})"
         embed.add_field(name="Ids", value=url, inline=True)
         return embed
 
@@ -1138,8 +1179,9 @@ class INatEmbeds(MixinMeta):
         spp_url = f"{url}&view=species&verifiable=any&hrank=species"
         taxa_url = f"{url}&view=species&verifiable=any"
         fmt = (
-            f"[{obs_count}]({obs_url}) (#{obs_rank}) / [{spp_count}]({spp_url}) (#{spp_rank}) / "
-            f"[{taxa_count}]({taxa_url})"
+            f"[{obs_count:,}]({obs_url}) (#{obs_rank}) / "
+            f"[{spp_count:,}]({spp_url}) (#{spp_rank}) / "
+            f"[{taxa_count:,}]({taxa_url})"
         )
         embed.add_field(
             name="Obs (rank) / Spp (rank) / Leaf taxa", value=fmt, inline=True
@@ -1258,7 +1300,7 @@ class INatEmbeds(MixinMeta):
         if not inat_user:
             return
 
-        counts_pat = r"(\n|^)\[[0-9 \(\)]+\]\(.*?\) " + inat_user.login
+        counts_pat = r"(\n|^)\[[0-9, \(\)]+\]\(.*?\) " + inat_user.login
         inat_embed = msg.embeds[0]
         if inat_embed.taxon_id():
             taxon = await get_taxon(self, inat_embed.taxon_id(), refresh_cache=False)
@@ -1295,7 +1337,7 @@ class INatEmbeds(MixinMeta):
             update_place = place
 
         inat_embed = msg.embeds[0]
-        place_counts_pat = r"(\n|^)\[[0-9 \(\)]+\]\(.*?\) " + re.escape(
+        place_counts_pat = r"(\n|^)\[[0-9, \(\)]+\]\(.*?\) " + re.escape(
             update_place.display_name
         )
         if inat_embed.taxon_id():
@@ -1459,11 +1501,11 @@ class INatEmbeds(MixinMeta):
         if not (unobserved or ident):
             # Add/remove always results in a change to totals, so remove:
             description = re.sub(
-                r"\n\[[0-9 \(\)]+?\]\(.*?\) \*total\*", "", description
+                r"\n\[[0-9, \(\)]+?\]\(.*?\) \*total\*", "", description
             )
 
         matches = re.findall(
-            r"\n\[[0-9 \(\)]+\]\(.*?\) (?P<user_id>[-_a-z0-9]+)", description
+            r"\n\[[0-9, \(\)]+\]\(.*?\) (?P<user_id>[-_a-z0-9]+)", description
         )
         count_params = {**inat_embed.params}
         if action == "remove":
@@ -1504,7 +1546,7 @@ class INatEmbeds(MixinMeta):
 
         if not (unobserved or ident):
             matches = re.findall(
-                r"\n\[[0-9 \(\)]+\]\(.*?[?&]user_id=(?P<user_id>\d+)*?\)",
+                r"\n\[[0-9, \(\)]+\]\(.*?[?&]user_id=(?P<user_id>\d+).*?\)",
                 description,
             )
             # Total added only if more than one user:
@@ -1580,9 +1622,9 @@ class INatEmbeds(MixinMeta):
     ):
         """Update the place totals for the embed."""
         # Add/remove always results in a change to totals, so remove:
-        description = re.sub(r"\n\[[0-9 \(\)]+?\]\(.*?\) \*total\*", "", description)
+        description = re.sub(r"\n\[[0-9, \(\)]+?\]\(.*?\) \*total\*", "", description)
 
-        matches = re.findall(r"\n\[[0-9 \(\)]+\]\(.*?\) (.*?)(?=\n|$)", description)
+        matches = re.findall(r"\n\[[0-9, \(\)]+\]\(.*?\) (.*?)(?=\n|$)", description)
         count_params = {**inat_embed.params, "place_id": place.place_id}
         if action == "remove":
             # Remove the header if last one and the place's count:
@@ -1602,7 +1644,7 @@ class INatEmbeds(MixinMeta):
             description += "\n" + formatted_counts
 
         matches = re.findall(
-            r"\n\[[0-9 \(\)]+\]\(.*?\?place_id=(?P<place_id>\d+)&.*?\)",
+            r"\n\[[0-9, \(\)]+\]\(.*?\?place_id=(?P<place_id>\d+)&.*?\)",
             description,
         )
         # Total added only if more than one place:

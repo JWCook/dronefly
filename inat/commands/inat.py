@@ -92,7 +92,7 @@ class CommandsInat(INatEmbeds, MixinMeta):
         ```
         [p]obs my gcki on march 13
         -> My Golden-crowned kinglet observed March 13
-        [p]obs gcki since 2021 newest
+        [p]obs gcki since jan 2021 newest
         -> First GCKI of the year
         [p]s obs gcki until mar
         -> On or before the month end
@@ -177,6 +177,10 @@ class CommandsInat(INatEmbeds, MixinMeta):
         **`waspsonly`**`   apocrita opt`
         **`       `**`       without_taxon_id=`
         **`       `**`       47336,630955`
+        **`nonflowering`**` plantae opt`
+        **`       `**`       without_taxon_id=47125`
+        **`nonvascular`**` plantae opt`
+        **`       `**`       without_taxon_id=211194`
         """  # noqa: E501
         await ctx.send_help()
 
@@ -222,7 +226,7 @@ class CommandsInat(INatEmbeds, MixinMeta):
 
         `captive` `endemic` `identified` `introduced` `native` `out_of_range` `pcid` `photos` `popular` `sounds` `threatened` `verifiable`
 
-        Boolean options without a parameter default to `=true`, e.g. `,tab my verifiable` means `,tab my verifiable=true`. Other values can be `=false` or `=any`.
+        Boolean options without a parameter default to `=true`, e.g. `,tab my opt verifiable` means `,tab my opt verifiable=true`. Other values can be `=false` or `=any`.
 
         **Options that always require a parameter:**
 
@@ -384,6 +388,36 @@ class CommandsInat(INatEmbeds, MixinMeta):
             else:
                 msg = "not set"
         await ctx.send(embed=make_embed(description=f"Active role: {msg}"))
+
+    @inat_set.command(name="manage_users_role")
+    @checks.admin_or_permissions(manage_roles=True)
+    @checks.bot_has_permissions(embed_links=True)
+    async def set_manage_users_role(
+        self, ctx, manage_users_role: Optional[discord.Role]
+    ):
+        """Set manage users role."""
+        if ctx.author.bot or ctx.guild is None:
+            return
+
+        config = self.config.guild(ctx.guild)
+
+        if manage_users_role:
+            msg = manage_users_role.mention
+            await config.manage_users_role.set(manage_users_role.id)
+        else:
+            find = await config.manage_users_role()
+            if find:
+                manage_users_role = next(
+                    (role for role in ctx.guild.roles if role.id == find), None
+                )
+                msg = (
+                    manage_users_role.mention
+                    if manage_users_role
+                    else f"missing role: <@&{find}>"
+                )
+            else:
+                msg = "not set"
+        await ctx.send(embed=make_embed(description=f"Manage users role: {msg}"))
 
     @inat_set.command(name="beta_role")
     @checks.admin_or_permissions(manage_roles=True)
@@ -691,10 +725,30 @@ class CommandsInat(INatEmbeds, MixinMeta):
         ctx,
         project_abbrev: str,
         project_id: str,
-        creds: Optional[str],
-        role: Optional[discord.Role],
+        main: Optional[bool] = False,
+        role: Optional[discord.Role] = None,
+        teams: Optional[str] = None,
     ):
-        """Add a server event project (mods)."""
+        """Add a server event project (mods).
+
+        - `project_abbrev` uniquely identifies this project.
+        - `project_id` Use `[p]prj` or `[p]s prj` to look it up for the project.
+        - `main` is a main event for the server, listed in the `[p]user` / `[p]me` display. Please define no more than two of these.
+        - `role` identifies a user as a participant of the event project.
+        - `teams` one or more *event project abbreviations* for other teams of this event, separated by commas.
+
+        *Examples:*
+        To define two main server projects:
+
+        `[p]inat set event ever 48611 True`
+        `[p]inat set event year 124254 True`
+
+        To define "Team Crustaceans" vs. "Team Cetaceans" bioblitz event:
+
+        `[p]inat set event crustaceans 122951 False "Team Crustaceans" cetaceans`
+        `[p]inat set event cetaceans 122952 False "Team Cetaceans" crustaceans`
+        """  # noqa: E501
+
         config = self.config.guild(ctx.guild)
         event_projects = await config.event_projects()
         _event_project = event_projects.get(project_abbrev)
@@ -707,10 +761,11 @@ class CommandsInat(INatEmbeds, MixinMeta):
 
         event_project["project_id"] = project_id
         event_projects[project_abbrev] = event_project
-        if creds or not _event_project:
-            event_project["creds"] = creds
+        event_project["main"] = main
         if role or not _event_project:
-            event_project["role"] = role
+            event_project["role"] = role.id if role else None
+        if teams or not _event_project:
+            event_project["teams"] = teams
         await config.event_projects.set(event_projects)
         await ctx.send(
             f"event project {project_abbrev} is now:\n```py\n{repr(event_project)}\n```"
