@@ -304,13 +304,14 @@ class INatEmbed(discord.Embed):
         return int(taxon_id) if taxon_id else None
 
     def controlled_term(self):
+        """Return controlled term from embed, if present."""
         term_id = self.params.get("term_id")
         if not term_id:
             return None
         term_value_id = self.params.get("term_value_id")
         if not term_value_id:
             return str(term_id)
-        return "{} {}".format(term_id, term_value_id)
+        return f"{term_id} {term_value_id}"
 
     def user_id(self):
         """Return user_id(s) from embed, if present."""
@@ -371,7 +372,8 @@ EMOJI = {
 class INatEmbeds(MixinMeta):
     """Provide embeds for iNatCog."""
 
-    def check_taxon_query(self, ctx, query):
+    @staticmethod
+    def check_taxon_query(ctx, query):
         """Check for valid taxon query."""
         if not isinstance(query, Query):
             return
